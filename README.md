@@ -1,5 +1,7 @@
 # carillon
-The Indoor Carillon Project: script for a Raspberry Pi to drive a slave clock and a MIDI instrument on schedule, synced to NTP
+The Indoor Carillon Project: script for a Raspberry Pi to drive a slave clock and a MIDI instrument on schedule, synced to NTP.
+
+This is very much in progress. At this point I am still gathering the hardware.
 
 ## What the what?
 I've got a harebrained scheme to build an indoor carillon in two loosely-coupled parts:
