@@ -24,9 +24,7 @@ Because the only link between the Clock and Bells is MIDI, the Clock can control
 * **midi/** - Some common (and not so common) chime programs (see below).
 
 ## Chime programs
-To be included in the program, MIDI files in the MIDI path (per sample.py) should be formatted as
-    [time][-description].mid
-where `time` is `[[N]h][[N]m][[N]s]`. If `[N]` is omitted it means "every". Use 24-hour notation. If `description` includes the word "strike" (case sensitive), it will be repeated per the current hour (12-hour clock). Priority is given to larger units of time, and specific (rather than repeating) times, to allow for easy overriding. Chimes do not interrupt other chimes, but strikes do.
+To be included in the program, MIDI files in the MIDI path (per sample.py) should be formatted as `[time][-description].mid` where `time` is `[[N]h][[N]m][[N]s]`. If `[N]` is omitted it means "every". Use 24-hour notation. If `description` includes the word "strike" (case sensitive), it will be repeated per the current hour (12-hour clock). Priority is given to larger units of time, and specific (rather than repeating) times, to allow for easy overriding. Chimes do not interrupt other chimes, but strikes do.
 
 #### Examples
 * **s-song.mid** - Plays every second
