@@ -3,7 +3,8 @@
 meterCal = [(59,94)] #This default defines a 60-second scale, more or less, on a 3VDC meter (since Pi GPIO is 3.3V).
 
 # MIDI data
-midiPort = 20 # ALSA port. I found it via aplaymidi -l (and luckily own an Edirol UM-1 which is natively supported).
+midiPort = 20 #Use aplaymidi -l to find yours. (Luckily I own an Edirol UM-1 which is natively supported.)
+midiHWPort = 'hw:1' #Use amidi -l to find yours
 midiPath = "./midi/westminster"
 # This default will only work if carillon is run from its own directory. Absolute path recommended.
 # See README.md for details on how to provide MIDI files to be added to the chime program.
