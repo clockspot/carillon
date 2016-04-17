@@ -7,7 +7,7 @@ I've got a harebrained scheme to build an indoor carillon in two loosely-coupled
 ### The Clock
 The brains of the operation. A Raspberry Pi will make its home inside a lovely 1960s Gents slave clock formerly in the employ of the UK Post Office. It will connect to wifi, sync to NTP (by virtue of ntpd), use GPIO pins to drive a small circuit to advance the clock and a 3VDC meter (via PWM) to display seconds / status, provide simple admistration of chime programs via MIDI files, and most importantly, output that MIDI on schedule. All this absurdity will be coordinated by the project you hold in your virtual hands.
 
-**For later:** provide administration via SSH or hopefully a webpage (which may also support MIDI via HTML5)
+**For later:** provide detailed administration via SSH or hopefully a webpage (which may also support MIDI via HTML5)
 
 ### The Bells
 A small 30-note glockenspiel, to be rigged with small solenoids wired up to [a MIDI decoder card from Orgautomatech](http://www.orgautomatech.com/), which receives input from the Clock. This card is favored because it supports wiring solenoids directly ([example](https://www.youtube.com/watch?v=UbwfAc0AKhk)).
@@ -24,7 +24,7 @@ Because the only link between the Clock and Bells is MIDI, the Clock can control
 * **midi/** - Some common (and not so common) chime programs (see below).
 
 ## Chime programs
-To be included in the program, MIDI files in the MIDI path (per sample.py) should be formatted as `[time][-description].mid` where `time` is `[[N]h][[N]m][[N]s]`. If `[N]` is omitted it means "every". Use 24-hour notation. If `description` includes the word "strike" (case sensitive), it will be repeated per the current hour (12-hour clock). Priority is given to larger units of time, and specific (rather than repeating) times, to allow for easy overriding. Chimes do not interrupt other chimes, but strikes do.
+To be included in the program, MIDI files in the MIDI path (per settings.py) should be formatted as `[time][-description].mid` where `time` is `[[N]h][[N]m][[N]s]`. If `[N]` is omitted it means "every". Use 24-hour notation. If `description` includes the word "strike" (case sensitive), it will be repeated per the current hour (12-hour clock). If multiple .mid files are triggered at once, only the highest-priority one plays: priority is given to larger units of time, and specific (rather than repeating) times, which allows for easy overriding. Chimes do not interrupt other chimes, but strikes do.
 
 #### Examples
 * **s-song.mid** - Plays every second
