@@ -12,6 +12,8 @@ The brains of the operation. A Raspberry Pi will make its home inside a lovely 1
 ### The Bells
 A small 30-note glockenspiel, to be rigged with small solenoids wired up to [a MIDI decoder card from Orgautomatech](http://www.orgautomatech.com/), which receives input from the Clock. This card is favored because it supports wiring solenoids directly ([example](https://www.youtube.com/watch?v=UbwfAc0AKhk)).
 
+Because the only link between the Clock and Bells is MIDI, the Clock can control other MIDI instruments, and the Bells can be played with other MIDI controllers.
+
 ## Files herein
 * **carillon.py** - Where the magic happens.
 * **settings-sample.py** - Duplicate/rename this to **settings.py** and edit accordingly.
@@ -24,36 +26,40 @@ A small 30-note glockenspiel, to be rigged with small solenoids wired up to [a M
 ## Chime programs
 To be included in the program, MIDI files in the MIDI path (per sample.py) should be formatted as
     [time][-description].mid
-where `time` is `[[N]h][[N]m][[N]s]`. If `[N]` is omitted it means "every". Use 24-hour notation. If `description` includes the word "strike" (case sensitive), it will be repeated per the current hour (12-hour clock).
+where `time` is `[[N]h][[N]m][[N]s]`. If `[N]` is omitted it means "every". Use 24-hour notation. If `description` includes the word "strike" (case sensitive), it will be repeated per the current hour (12-hour clock). Priority is given to larger units of time, and specific (rather than repeating) times, to allow for easy overriding. Chimes do not interrupt other chimes, but strikes do.
 
-#### Examples:
-(Can you tell I'm going a little nuts learning Markdown?)
-| Filename                  | Plays how often                   |
-|---------------------------|-----------------------------------|
-| s-song.mid                | every second                      |
-| 30s-song.mid              | at 30s every minute               |
-| m-song.mid                | every minute (at 0s)              |
-| 15m-song.mid              | at 15m every hour (at 0s)         |
-| 59m45s-song.mid           | at 59m 45s every hour             |
-| h-song.mid                | every hour (at 0m 0s)             |
-| nh-song.mid               | won't play                        |
-| -song.mid                 | won't play                        |
-| Extension other than .mid | won't play                        |
-| why-me.mid                | Will probably crash the script    |
-Validation is currently a bit loose. If you have mids that fit the pattern but invalidly, the script may crash. The safest place for .mids you don't want played is in a different folder (such as a subfolder, it'll skip that).
+#### Examples
+* **s-song.mid** - Plays every second
+* **30s-song.mid** - Plays at 30s every minute
+* **m-song.mid** - Plays every minute (at 0s)
+* **15m-song.mid** - Plays at 15m every hour (at 0s)
+* **59m45s-song.mid** - Plays at 59m 45s every hour
+* **h-strike.mid** - Plays every hour (at 0m 0s) and repeats per current hour
+* **nh-song.mid** - Won't play
+* **-song.mid** - Won't play
+* **Extension other than .mid** - Won't play
+* **why-me.mid** - Will probably crash the script
 
-#### Suggested program:
-Most of the provided programs follow this pattern.
-| Filename          | What                                                                              |
-|-------------------|-----------------------------------------------------------------------------------|
-| 15m-song.mid      | First quarter chimes                                                              |
-| 30m-song.mid      | Second quarter chimes                                                             |
-| 45m-song.mid      | Third quarter chimes                                                              |
-| 59m40s-song.mid   | Fourth quarter chimes, 20 seconds before top of hour (Big Ben style)              |
-| h-stroke.mid      | Hourly strokes, starting at top of hour, repeating per current hour               |
+Validation on these filenames is currently a bit loose. If you have mids that fit the pattern but invalidly, the script may crash. The safest place for .mids you don't want played is in a different folder (such as a subfolder, it'll skip that).
 
-## Ideaphoria!
+#### Included programs
+Most of the included programs follow a pattern of three quarters, plus a fourth quarter that plays a few seconds before the hour, plus the hour strokes, beginning at the very top of the hour, [Big-Ben-style](https://www.youtube.com/watch?v=bmZ2bpJKXUI). All are arranged by me in Logic, with reference to [Clock Chime Tunes Reference](http://www.clockguy.com/SiteRelated/SiteReferencePages/ClockChimeTunes.html) and [*Tolling Time*](http://www.mtosmt.org/issues/mto.00.6.4/mto.00.6.4.harrison.html?q=mto/issues/mto.00.6.4/mto.00.6.4.harrison.html), both of which offer considerably more historical and theoretical detail.
+* **Canterbury Cathedral** - 3/4 notes added per quarter, [based on the 8th Gregorian tone](https://books.google.com/books?id=MR9GAQAAMAAJ&pg=PA14&lpg=PA14&dq=canterbury+cathedral+quarter+hour+chime&source=bl&ots=aN0UtyMD39&sig=ot3oeovs5TKWbAQBfKYJk_JcnjI&hl=en&sa=X&ved=0ahUKEwjXlKXX8pTMAhVB7SYKHQ9eB4MQ6AEILDAD#v=onepage&q&f=false) and [quite beautiful](https://www.youtube.com/watch?v=CrLb1XL65Bk). [Further deets](http://www.kenthistoryforum.co.uk/index.php?topic=4805.msg113620#msg113620).
+* **Canterbury Herschede** - 6 notes/quarter. Inspired by the Cathedral, allegedly.
+* **Guildford** - A rather musical one.
+* **Magdalen** - Only 2 notes/quarter.
+* **Parsifal** - 4 notes/quarter; inverts on itself. Inspired by Wagner's opera.
+* **Saint-Saens That'll Do Pig** - You may recognize this hamfisted arrangement from *Babe* (1995) or "If I Had Words" (1978), but it's originally from [Saint-Saëns' Symphony No. 3](https://www.youtube.com/watch?v=ZWCZq33BrOo). [Further deets](http://www.classicfm.com/composers/saint-saens/guides/organ-symphony-jane-jones/).
+* **St. Michael** - 8 notes/quarter. As heard at St. Michael's in Charleston, SC. Reminds me of [change ringing.](https://en.wikipedia.org/wiki/Change_ringing)
+* **Trinity** - 6 notes/quarter, but the pitches cover a whole octave. After the Trinity Church in NYC.
+* **Westminster** - 4 notes/quarter. The one everyone knows, from Cambridge University via the Palace of Westminster.
+* **Whittington** - 8 notes/quarter. There's apparently several versions of this. No matter, they all sound like [change ringing.](https://en.wikipedia.org/wiki/Change_ringing)
+* **Winchester** - 6 notes/quarter.
+
+**For later:** program this thing to do actual [change ringing](https://en.wikipedia.org/wiki/Change_ringing)?
+
+## Credit where due!
 * [Harpsichord driven by Orgautomatech decoders](https://www.youtube.com/watch?v=UbwfAc0AKhk)
 * [Make an Atom Synchronised Clock from a 1950s Slave Clock on Instructables](http://www.instructables.com/id/Make-an-Atom-Synchronised-Clock-from-a-1950s-Slav/)
-* [Clock Chime Tunes Reference](http://www.clockguy.com/SiteRelated/SiteReferencePages/ClockChimeTunes.html)
+* [Clock Chime Tunes Reference](http://www.clockguy.com/SiteRelated/SiteReferencePages/ClockChimeTunes.html) and [*Tolling Time*](http://www.mtosmt.org/issues/mto.00.6.4/mto.00.6.4.harrison.html?q=mto/issues/mto.00.6.4/mto.00.6.4.harrison.html)
 * Various other credits as sprinkled throughout
