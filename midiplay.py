@@ -7,7 +7,7 @@ import settings
 import sys
 import subprocess
 from subprocess import call #synchronous
-from subprocess import Popen #asynchronous
+#from subprocess import Popen #asynchronous
 
 midiFile = sys.argv[len(sys.argv)-1] #take last argument
 if midiFile.find('.mid') == -1:
@@ -17,7 +17,7 @@ if midiFile.find('.mid') == -1:
 midiProcess = False
 
 def midiStop():
-    #http://askubuntu.com/a/565566/531496
+    #No need to stop midiProcess, we're doing it synchronously so it will stop first
     call(['amidi','-p',settings.midiHWPort,'-S','f07e7f0901f7'])
 
 try:

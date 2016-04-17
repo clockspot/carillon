@@ -16,7 +16,7 @@
 print("Carillon starting.");
 
 #External modules
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import os
 #from os import path
 #from os import listdir
@@ -32,16 +32,14 @@ from datetime import datetime
 #External settings
 import settings
 
-# http://stackoverflow.com/a/4943474
+#http://stackoverflow.com/a/4943474
 def getScriptPath():
     return os.path.dirname(os.path.realpath(sys.argv[0]))
 
 #Hardware stuff - Broadcom pin definitions
-clockPin = 20 #trigger external circuit to advance slave clock #TODO correction mechanisms
-meterPin = 18 #pwm to control moving-coil galvanometer (3VDC) as seconds display
+# TODO: consider extra output to trigger an auxiliary bell system / striker?
 
 #MIDI stuff
-midiStopFile = getScriptPath() + "/alloff.mid" 
 midiProcess = False
 midiProgram = []
 
@@ -100,66 +98,13 @@ def buildProgram():
     #for i in range(0,len(midiProgram)): print(midiProgram[i])
 #end def buildProgram
 
-def convertValueToDC(valNew):
-    dcNew = 0
-    #Which calibration range does valNew fall into?
-    for i in range(0, len(settings.meterCal)):
-        #If it falls in this one, or in/past the last one:
-        if(valNew < settings.meterCal[i][0] or i == len(settings.meterCal)-1):
-            valMax = settings.meterCal[i][0]
-            valMin = 0
-            dcMax = settings.meterCal[i][1]
-            dcMin = 0
-            #if valNew < first calibration point (indicated by i==0), lower bound is assumed calibration point of (0,0)
-            if i > 0: #if valNew > first calibration point, set lower bound to previous calibration point
-                valMin = settings.meterCal[i-1][0]
-                dcMin = settings.meterCal[i-1][1]
-            #Map new value. Not sure if I've reduced this as far as it can go mathwise.
-            #print ("i="+str(i)+", valNew="+str(valNew)+", valMax="+str(valMax)+", valMin="+str(valMin)+", dcMax="+str(dcMax)+", dcMin="+str(dcMin))
-            return float(dcMax-dcMin)*(float(valNew-valMin)/(valMax-valMin)) + dcMin
-        #end found calibration range
-    #end for each calibration range
-#end def convertValueToDC
-
-def updateMeter(valNew):
-    #We will probably set it to valNew, but there may be some statuses to display instead.
-    #if(no network connection): setMeter(10)
-    if(clockProcess != False and clockProcess.poll() is None): setMeter(30) #to indicate clock is moving
-    #elif(no network connection): setMeter(10)
-    #elif(bad ntp): setMeter(20)
-    else: setMeter(valNew)
-#end def updateMeter
-
-dcLast = 0
-meterLag = 0.18 #seconds between ballistics steps
-def setMeter(valNew):
-    #pwm must already have been started
-    global dcLast #otherwise the fact that we set dcLast inside this function would make python complain
-    dcNew = convertValueToDC(valNew) #find new dc
-    if dcNew > 100: dcNew = 100 #apply range limits
-    if dcNew < 0: dcNew = 0
-    #set meter, using ballistics if dcChg is great enough
-    dcChg = dcNew-dcLast    
-    if(abs(dcChg) > 10): #apply ballistics
-        #easing out equations by Robert Penner - gizma.com/easing
-        steps = 4
-        for t in range(1, steps+1):
-            #quadratic t^2
-            t /= float(steps)
-            nowDC = float(-dcChg) * t * (t-2) + dcLast
-            pwm.ChangeDutyCycle( nowDC )
-            if(t<steps):
-                time.sleep(meterLag)
-    else: #just go to there
-        pwm.ChangeDutyCycle(dcNew)
-    dcLast = dcNew
-#end def setMeter
-
 def midiStop():
     global midiProcess
     if(midiProcess != False and midiProcess.poll() is None):
-        midiProcess.terminate() #not kill you, sir, never kill you!...
-    midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),midiStopFile])
+        midiProcess.terminate()
+        #http://askubuntu.com/a/565566/531496
+        call(['amidi','-p',settings.midiHWPort,'-S','f07e7f0901f7'])
+    # midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),midiStopFile])
     # time.sleep(0.05)
     # midiProcess.terminate()
 #end def midiStop
@@ -170,34 +115,14 @@ def to12Hr(hr):
     else: return hr
 #end def to12Hr
 
-clockProcess = False
-#TODO add clockCalibrate.py, clockLast.txt (in .gitignore), and clockAdvance.py
-def updateClock():
-    global clockProcess
-    if(clockProcess != False and clockProcess.poll() is None):
-        midiProcess.terminate() #not kill you, sir, never kill you!
-    midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),midiStopFile])
-    #call clockAdvance - it should advance the clock immediately, then check to see if it needs to go further per clockLast.txt
-    #this can even be done at 29/59 
-    # GPIO.output(clockPin, GPIO.HIGH)
-    # time.sleep(0.3)
-    # GPIO.output(clockPin, GPIO.LOW)
-#end def updateClock
-
 #Let's go!
 
-#Pin setup
-GPIO.setmode(GPIO.BCM)
-#outputs
-GPIO.setup(clockPin, GPIO.OUT)
-GPIO.setup(meterPin, GPIO.OUT)
-pwm = GPIO.PWM(meterPin, 50)
-pwm.start(0)
+# #Pin setup
+# GPIO.setmode(GPIO.BCM)
+# #outputs
+# GPIO.setup(strikePin, GPIO.OUT) #TODO
 
-#MIDI and timing setup
 buildProgram()
-midiStop() #initializes midiProcess to a process
-updateClock()
 
 print("Carillon running. Press Ctrl+C to stop.");
 
@@ -242,20 +167,8 @@ try:
             #end if striking
             
             #A few things we'd like to do at less frequent intervals
-            if(nowTime.second==0 or nowTime.second==30):
-                updateClock()
-            
-            #Finally, update the meter - the last thing where real time is important
-            updateMeter(nowTime.second)
-
-            #Now some non-realtime stuff
             if(nowTime.second==1):
                 buildProgram() #check for updates
-            
-            #TODO check for ntp status on minute changes?
-            #ntpq -c rv | grep "reftime" with result e.g.
-            #reftime=dabcecde.167297c4  Sat, Apr 16 2016 11:54:54.087,
-            #reftime=00000000.00000000  Sat, Apr 16 2016 11:54:54.087,
             
             lastSecond = nowTime.second
         #end if new second
@@ -266,10 +179,7 @@ except KeyboardInterrupt:
 # except:
 #     print("Error")
 finally:
-    if dcLast > 20: #kill the meter softly
-        setMeter(0)
     midiStop()
-    GPIO.output(clockPin, GPIO.LOW)
-    pwm.stop()
-    GPIO.cleanup()
+    #GPIO.output(clockPin, GPIO.LOW)
+    #GPIO.cleanup()
 #end try/except/finally
