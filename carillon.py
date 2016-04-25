@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # John Memmeling and John Van Eyck
 # Hold state at Bruges. In sore shame
 # I scanned the works that keep their name.
@@ -16,14 +18,9 @@
 print("Carillon starting.");
 
 #External modules
-#import RPi.GPIO as GPIO
-import os
-#from os import path
-#from os import listdir
+import os #includes path, listdir
 import sys
-import time
-#from time import asctime, localtime
-#from time import localtime
+import time #includes asctime, localtime
 import subprocess
 from subprocess import call #synchronous
 from subprocess import Popen #asynchronous
@@ -31,6 +28,7 @@ from datetime import datetime
 
 #External settings
 import settings
+#TODO: set default values for settings that aren't present in settings.py, and warn
 
 #http://stackoverflow.com/a/4943474
 def getScriptPath():
@@ -126,12 +124,13 @@ buildProgram()
 
 print("Carillon running. Press Ctrl+C to stop.");
 
-lastSecond = -1
 nowTime = datetime.now()
+
 strikingFile = False #when striking, holds midi filename
-strikingSecs = 0
+strikingSecs = -1
 strikingDelay = 3
 strikingCount = 0
+lastSecond = -1
 try:
     while 1:
         #important to snapshot current time, so test and assignment use same time value
@@ -153,15 +152,15 @@ try:
             #end if not striking
             
             if(strikingFile != False): #are we on the strike train?
-                if countSeconds == strokeDelay*strokesDone: #is it time for a stroke?
+                strikingSecs += 1
+                if strikingSecs == strokeDelay*strokesDone: #is it time for a stroke?
                     midiStop() #stop chime or stroke already sounding, if any
                     midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+strikingFile])
                     strikingCount += 1
-                    strikingSecs += 1
                     if(strikingCount == to12Hr(nowTime.hour)): #the strike train has reached the station. mind the gap.
                         strikingFile = False
                         strikingCount = 0
-                        strikingSecs = 0
+                        strikingSecs = -1
                     #end if done with striking
                 #end if it's time for a strike
             #end if striking
