@@ -15,7 +15,8 @@
 # and wrote a carillon in Python.
 # - Me
 
-print("Carillon starting.");
+#External settings
+import settings
 
 #External modules
 import os #includes path, listdir
@@ -26,15 +27,10 @@ from subprocess import call #synchronous
 from subprocess import Popen #asynchronous
 from datetime import datetime
 
-#External settings
-import settings
-#TODO: set default values for settings that aren't present in settings.py, and warn
-
-#http://stackoverflow.com/a/4943474
 def getScriptPath():
+    #http://stackoverflow.com/a/4943474
     return os.path.dirname(os.path.realpath(sys.argv[0]))
 
-#Hardware stuff - Broadcom pin definitions
 # TODO: consider extra output to trigger an auxiliary bell system / striker?
 
 #MIDI stuff
@@ -107,31 +103,18 @@ def midiStop():
     # midiProcess.terminate()
 #end def midiStop
 
-def to12Hr(hr):
-    if hr == 0: return 12
-    elif hr > 12: return hr-12
-    else: return hr
-#end def to12Hr
-
 #Let's go!
-
-# #Pin setup
-# GPIO.setmode(GPIO.BCM)
-# #outputs
-# GPIO.setup(strikePin, GPIO.OUT) #TODO
-
-buildProgram()
-
-print("Carillon running. Press Ctrl+C to stop.");
-
-nowTime = datetime.now()
-
-strikingFile = False #when striking, holds midi filename
-strikingSecs = -1
-strikingDelay = 3
-strikingCount = 0
-lastSecond = -1
 try:
+    print("Carillon running. Press Ctrl+C to stop.");
+
+    buildProgram()
+
+    strikingFile = False #when striking, holds midi filename
+    strikingSecs = -1
+    strikingDelay = 3
+    strikingCount = 0
+
+    lastSecond = -1
     while 1:
         #important to snapshot current time, so test and assignment use same time value
         nowTime = datetime.now()
@@ -157,7 +140,7 @@ try:
                     midiStop() #stop chime or stroke already sounding, if any
                     midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+strikingFile])
                     strikingCount += 1
-                    if(strikingCount == to12Hr(nowTime.hour)): #the strike train has reached the station. mind the gap.
+                    if(strikingCount == ((nowTime.hour-1)%12)+1 : #the strike train has reached the station. mind the gap. (this fancy math converts 24h to 12h)
                         strikingFile = False
                         strikingCount = 0
                         strikingSecs = -1
@@ -173,12 +156,12 @@ try:
         #end if new second
         time.sleep(0.05)
     #end while            
+except AttributeError: #Easier to ask forgiveness than permission (EAFP) - http://stackoverflow.com/a/610923
+    print("\r\nAttributeError. Please ensure your settings.py includes all items from settings-sample.py.")
 except KeyboardInterrupt:
     print("\r\nBye!")
 # except:
 #     print("Error")
 finally:
     midiStop()
-    #GPIO.output(clockPin, GPIO.LOW)
-    #GPIO.cleanup()
 #end try/except/finally
