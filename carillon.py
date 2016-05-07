@@ -43,9 +43,9 @@ def buildProgram():
     for i in range(0,len(midiFiles)):
         #Parse files in settings.midiPath (settings.py). Per description there:
             # To be included in the program, MIDI files in settings.midiPath should be formatted as [time][-description].mid
-            # where [time] is [[N]h][[N]m][[N]s]. If [N] is omitted it means "every"
+            # where [time] is [[N]d][[N]h][[N]m][[N]s]. If [N] is omitted it means "every"
             # If description includes the word "stroke" (case sensitive), it will be repeated per current hour
-        #Each program item will be a 5-tuple comprising hour, minute, second, stroke flag, and midi file name.
+        #Each program item will be a 6-tuple comprising weekday, hour, minute, second, stroke flag, and midi file name.
         
         fTest = midiFiles[i].split('.')
         if(fTest[len(fTest)-1]=='mid'): #it's a midi file, proceed
@@ -54,9 +54,12 @@ def buildProgram():
             #if it's empty, or includes an 'n', skip this file
             if(len(fTest.split('n')) > 1 or fTest==''): continue
             #Extract time values
-            fH = fTest.split('h')
+            fD = fTest.split('d')
+            fH = fD[len(fD)-1].split('h')
             fM = fH[len(fH)-1].split('m')
             fS = fM[len(fM)-1].split('s')
+            if len(fD)>1: fD = fD[0] #a hit on explicit day of the week
+            else: fD=-1
             if len(fH)>1: fH = fH[0] #a hit on explicit hours
             else: fH=-1
             if len(fM)>1: fM = fM[0] #minutes
@@ -65,9 +68,15 @@ def buildProgram():
             else: fS=-1
             #At this point, '' = every, larger -1 = every, smaller -1 = 0
             #Sanitize to no strings, -1 = every, explicit 0s
+            if(fD!=-1):
+                if(fD==''): fD=-1
+                else: fD=int(fD) #neither -1 nor an empty string - a real value - cast to int
+                if(fH==-1): fH=0 #zero smaller values, if unspecified
+                if(fM==-1): fM=0
+                if(fS==-1): fS=0
             if(fH!=-1):
                 if(fH==''): fH=-1
-                else: fH=int(fH) #neither -1 nor an empty string - a real value - cast to int
+                else: fH=int(fH)
                 if(fM==-1): fM=0
                 if(fS==-1): fS=0
             if(fM!=-1):
@@ -119,34 +128,36 @@ try:
         #important to snapshot current time, so test and assignment use same time value
         nowTime = datetime.now()
         if lastSecond != nowTime.second:
-            #take care of MIDI first to minimize delay in starting to play
-            #list comprehension is amazing. I owe http://stackoverflow.com/a/2917388 a beer or two
-            if(strikingFile == False): #if we're not striking, look for a chime or strike file for this moment                
-                midiMatches = [i for i, v in enumerate(midiProgram) if ((v[0]==nowTime.hour or v[0]==-1) and (v[1]==nowTime.minute or v[1]==-1) and (v[2]==nowTime.second or v[2]==-1))]
-                if(len(midiMatches)>0):
-                    #print("Found midi matches! "+str(midiMatches)+"  Best match: "+str(midiProgram[midiMatches[0]]))
-                    if(midiProgram[midiMatches[0]][3] == True): #all aboard the strike train #horologyjoke #ahaha
-                        strikingFile = midiProgram[midiMatches[0]][4];
-                    else: #just a regular chime
-                        if(midiProcess.poll() is not None): #don't stop a chime already in progress
-                            midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+midiProgram[midiMatches[0]][4]])
-                    #end strike vs chime test
-                #end if we found a midi match
-            #end if not striking
+            if nowTime.hour < settings.silentHours[0] and nowTime.hour >= settings.silentHours[1]:
+                #take care of MIDI first to minimize delay in starting to play
+                #list comprehension is amazing. I owe http://stackoverflow.com/a/2917388 a beer or two
+                if(strikingFile == False): #if we're not striking, look for a chime or strike file for this moment                
+                    midiMatches = [i for i, v in enumerate(midiProgram) if ((v[0]==nowTime.hour or v[0]==-1) and (v[1]==nowTime.minute or v[1]==-1) and (v[2]==nowTime.second or v[2]==-1))]
+                    if(len(midiMatches)>0):
+                        #print("Found midi matches! "+str(midiMatches)+"  Best match: "+str(midiProgram[midiMatches[0]]))
+                        if(midiProgram[midiMatches[0]][3] == True): #all aboard the strike train #horologyjoke #ahaha
+                            strikingFile = midiProgram[midiMatches[0]][4];
+                        else: #just a regular chime
+                            if(midiProcess.poll() is not None): #don't stop a chime already in progress
+                                midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+midiProgram[midiMatches[0]][4]])
+                        #end strike vs chime test
+                    #end if we found a midi match
+                #end if not striking
             
-            if(strikingFile != False): #are we on the strike train?
-                strikingSecs += 1
-                if strikingSecs == strokeDelay*strokesDone: #is it time for a stroke?
-                    midiStop() #stop chime or stroke already sounding, if any
-                    midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+strikingFile])
-                    strikingCount += 1
-                    if(strikingCount == ((nowTime.hour-1)%12)+1 : #the strike train has reached the station. mind the gap. (this fancy math converts 24h to 12h)
-                        strikingFile = False
-                        strikingCount = 0
-                        strikingSecs = -1
-                    #end if done with striking
-                #end if it's time for a strike
-            #end if striking
+                if(strikingFile != False): #are we on the strike train?
+                    strikingSecs += 1
+                    if strikingSecs == strokeDelay*strokesDone: #is it time for a stroke?
+                        midiStop() #stop chime or stroke already sounding, if any
+                        midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+strikingFile])
+                        strikingCount += 1
+                        if(strikingCount == ((nowTime.hour-1)%12)+1 : #the strike train has reached the station. mind the gap. (this fancy math converts 24h to 12h)
+                            strikingFile = False
+                            strikingCount = 0
+                            strikingSecs = -1
+                        #end if done with striking
+                    #end if it's time for a strike
+                #end if striking
+            #end if within striking time (not silent hours)
             
             #A few things we'd like to do at less frequent intervals
             if(nowTime.second==1):
