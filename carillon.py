@@ -38,6 +38,7 @@ midiProcess = False
 midiProgram = []
 
 def buildProgram():
+    global midiProgram
     midiFiles = os.listdir(settings.midiPath)
     midiProgram = []
     for i in range(0,len(midiFiles)):
@@ -131,14 +132,17 @@ try:
             if nowTime.hour < settings.silentHours[0] and nowTime.hour >= settings.silentHours[1]:
                 #take care of MIDI first to minimize delay in starting to play
                 #list comprehension is amazing. I owe http://stackoverflow.com/a/2917388 a beer or two
-                if(strikingFile == False): #if we're not striking, look for a chime or strike file for this moment                
+                if(strikingFile == False): #if we're not striking, look for a chime or strike file for this moment
                     midiMatches = [i for i, v in enumerate(midiProgram) if ((v[0]==nowTime.hour or v[0]==-1) and (v[1]==nowTime.minute or v[1]==-1) and (v[2]==nowTime.second or v[2]==-1))]
+                    #print(nowTime)
+                    #print(midiProgram)
+                    #print(midiMatches)
                     if(len(midiMatches)>0):
-                        #print("Found midi matches! "+str(midiMatches)+"  Best match: "+str(midiProgram[midiMatches[0]]))
+                        print("At "+str(nowTime.hour)+":"+str(nowTime.minute)+":"+str(nowTime.second)+", found "+str(len(midiMatches))+" midi matches! Best match: "+str(midiProgram[midiMatches[0]]))
                         if(midiProgram[midiMatches[0]][3] == True): #all aboard the strike train #horologyjoke #ahaha
                             strikingFile = midiProgram[midiMatches[0]][4];
                         else: #just a regular chime
-                            if(midiProcess.poll() is not None): #don't stop a chime already in progress
+                            if(midiProcess == False or midiProcess.poll() is not None): #don't stop a chime already in progress
                                 midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+midiProgram[midiMatches[0]][4]])
                         #end strike vs chime test
                     #end if we found a midi match
@@ -146,11 +150,11 @@ try:
             
                 if(strikingFile != False): #are we on the strike train?
                     strikingSecs += 1
-                    if strikingSecs == strokeDelay*strokesDone: #is it time for a stroke?
+                    if strikingSecs == strikingDelay*strikingCount: #is it time for a stroke?
                         midiStop() #stop chime or stroke already sounding, if any
                         midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+strikingFile])
                         strikingCount += 1
-                        if(strikingCount == ((nowTime.hour-1)%12)+1 : #the strike train has reached the station. mind the gap. (this fancy math converts 24h to 12h)
+                        if(strikingCount == ((nowTime.hour-1)%12)+1): #the strike train has reached the station. mind the gap. (this fancy math converts 24h to 12h)
                             strikingFile = False
                             strikingCount = 0
                             strikingSecs = -1
@@ -167,12 +171,12 @@ try:
         #end if new second
         time.sleep(0.05)
     #end while            
-except AttributeError: #Easier to ask forgiveness than permission (EAFP) - http://stackoverflow.com/a/610923
-    print("\r\nAttributeError. Please ensure your settings.py includes all items from settings-sample.py.")
+#except AttributeError: #Easier to ask forgiveness than permission (EAFP) - http://stackoverflow.com/a/610923
+    #print("\r\nAttributeError. Please ensure your settings.py includes all items from settings-sample.py.")
 except KeyboardInterrupt:
     print("\r\nBye!")
-# except:
-#     print("Error")
+#except:
+    #print("Error")
 finally:
     midiStop()
 #end try/except/finally
