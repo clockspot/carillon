@@ -109,6 +109,22 @@ class Carillon():
             #http://askubuntu.com/a/565566/531496
             call(['amidi','-p',settings.midiHWPort,'-S','f07e7f0901f7'])
     #end def midiStop
+    
+    def canSound(self,nowTime):
+        if settings.silentHours == False: return True
+        if settings.silentHours[0] == settings.silentHours[1]: return True
+        
+        isBeforeStop = (nowTime.hour < settings.silentHours[0] or (nowTime.hour == settings.silentHours[0] and nowTime.minute == 0))
+        #we include the first minute (:00) of the stop hour - that way pre-hour chimes don't go without top-of-the-hour strike
+        isAfterStart = nowTime.hour >= settings.silentHours[1]
+        
+        if settings.silentHours[0] > settings.silentHours[1]: #silent hours cross a midnight - e.g. 22 to 7
+            if isBeforeStop and isAfterStart: return True
+            else: return False
+        
+        else: #silent hours do not cross a midnight - e.g. 1 to 7
+            if isBeforeStop or isAfterStart: return True
+            else: return False
 
     def run(self):
         #Let's go!
@@ -135,7 +151,7 @@ class Carillon():
                 #important to snapshot current time, so test and assignment use same time value
                 nowTime = datetime.now()
                 if lastSecond != nowTime.second:
-                    if nowTime.hour < settings.silentHours[0] and nowTime.hour >= settings.silentHours[1]:
+                    if self.canSound(nowTime):
                         #take care of MIDI first to minimize delay in starting to play
                         #list comprehension is amazing. I owe http://stackoverflow.com/a/2917388 a beer or two
                         midiMatches = [i for i, v in enumerate(self.midiProgram) if ((v[0]==nowTime.hour or v[0]==-1) and (v[1]==nowTime.minute or v[1]==-1) and (v[2]==nowTime.second or v[2]==-1))]
