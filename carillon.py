@@ -38,10 +38,6 @@ class Carillon():
         self.midiProcess = False #holds the process playing midi now
         self.midiProgram = [] #holds the midi program built from available files
 
-    #MIDI stuff
-    #midiProcess = False
-    #midiProgram = []
-
     def buildProgram(self):
         #global midiProgram
         midiFiles = os.listdir(settings.midiPath)
@@ -107,15 +103,11 @@ class Carillon():
     #end def buildProgram
 
     def midiStop(self):
-        #global midiProcess
         #self.midiProcess will be False if never used, None if in use
         if(self.midiProcess != False and self.midiProcess.poll() is None):
             midiProcess.terminate()
             #http://askubuntu.com/a/565566/531496
             call(['amidi','-p',settings.midiHWPort,'-S','f07e7f0901f7'])
-        # midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),midiStopFile])
-        # time.sleep(0.05)
-        # midiProcess.terminate()
     #end def midiStop
 
     def run(self):
@@ -137,10 +129,6 @@ class Carillon():
 
             self.buildProgram()
 
-            strikingFile = False #when striking, holds midi filename
-            strikingSecs = -1
-            strikingCount = 0
-
             lastSecond = -1
             
             while 1:
@@ -150,36 +138,25 @@ class Carillon():
                     if nowTime.hour < settings.silentHours[0] and nowTime.hour >= settings.silentHours[1]:
                         #take care of MIDI first to minimize delay in starting to play
                         #list comprehension is amazing. I owe http://stackoverflow.com/a/2917388 a beer or two
-                        if(strikingFile == False): #if we're not striking, look for a chime or strike file for this moment
-                            midiMatches = [i for i, v in enumerate(self.midiProgram) if ((v[0]==nowTime.hour or v[0]==-1) and (v[1]==nowTime.minute or v[1]==-1) and (v[2]==nowTime.second or v[2]==-1))]
-                            #self.logger.debug(nowTime)
-                            #self.logger.debug(self.midiProgram)
-                            #self.logger.debug(midiMatches)
-                            if(len(midiMatches)>0):
-                                self.logger.debug("At "+str(nowTime.hour)+":"+str(nowTime.minute)+":"+str(nowTime.second)+", found "+str(len(midiMatches))+" midi matches! Best match: "+str(self.midiProgram[midiMatches[0]]))
-                                if(self.midiProgram[midiMatches[0]][3] == True): #all aboard the strike train #horologyjoke #ahaha
-                                    strikingFile = self.midiProgram[midiMatches[0]][4]
-                                else: #just a regular chime
-                                    #self.midiProcess will be False if never used, None if in use
-                                    if(self.midiProcess == False or self.midiProcess.poll() is not None): #don't stop a chime already in progress
-                                        self.midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+self.midiProgram[midiMatches[0]][4]])
-                                #end strike vs chime test
-                            #end if we found a midi match
-                        #end if not striking
-            
-                        if(strikingFile != False): #are we on the strike train?
-                            strikingSecs += 1
-                            if strikingSecs == settings.strikingDelay*strikingCount: #is it time for a stroke?
-                                self.midiStop() #stop chime or stroke already sounding, if any
-                                self.midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+strikingFile])
-                                strikingCount += 1
-                                if(strikingCount == ((nowTime.hour-1)%12)+1): #the strike train has reached the station. mind the gap. (this fancy math converts 24h to 12h)
-                                    strikingFile = False
-                                    strikingCount = 0
-                                    strikingSecs = -1
-                                #end if done with striking
-                            #end if it's time for a strike
-                        #end if striking
+                        midiMatches = [i for i, v in enumerate(self.midiProgram) if ((v[0]==nowTime.hour or v[0]==-1) and (v[1]==nowTime.minute or v[1]==-1) and (v[2]==nowTime.second or v[2]==-1))]
+                        if(len(midiMatches)>0):
+                            self.logger.debug("At "+str(nowTime.hour)+":"+str(nowTime.minute)+":"+str(nowTime.second)+", found "+str(len(midiMatches))+" midi matches! Best match: "+str(self.midiProgram[midiMatches[0]]))
+                            if(self.midiProgram[midiMatches[0]][3] == True): #all aboard the strike train #horologyjoke #ahaha
+                                strikingFile = self.midiProgram[midiMatches[0]][4]
+                                strikingCount = 0
+                                while strikingCount < ((nowTime.hour-1)%12)+1:
+                                    strikingCount += 1
+                                    self.midiStop() #stop chime or stroke already sounding, if any
+                                    self.midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+strikingFile])
+                                    if strikingCount < ((nowTime.hour-1)%12)+1: time.sleep(settings.strikingDelay)
+                                strikingFile = False
+                                self.buildProgram() #likely missed the one at 1s
+                            else: #just a regular chime
+                                #self.midiProcess will be False if never used, None if in use
+                                if(self.midiProcess == False or self.midiProcess.poll() is not None): #don't stop a chime already in progress
+                                    self.midiProcess = Popen(['aplaymidi','-p',str(settings.midiPort),settings.midiPath+'/'+self.midiProgram[midiMatches[0]][4]])
+                            #end strike vs chime test
+                        #end if we found a midi match
                     #end if within striking time (not silent hours)
             
                     #A few things we'd like to do at less frequent intervals
